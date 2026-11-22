@@ -89,7 +89,10 @@ class OverlayService : Service() {
         val p = windowParams ?: return
         if (expanded) {
             if (r.childCount > 1) r.removeViews(1, r.childCount - 1)
-            panel = null; expanded = false
+            panel = null
+            expanded = false
+            p.width = dp(62)
+            p.height = dp(62)
         } else {
             panel = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
@@ -99,6 +102,9 @@ class OverlayService : Service() {
             }
             r.addView(panel, LinearLayout.LayoutParams(dp(260), dp(370)).apply { topMargin = dp(8) })
             expanded = true
+            // Grow the WindowManager surface so Android does not clip the panel below the bubble.
+            p.width = dp(280)
+            p.height = dp(450)
             renderPanel()
         }
         wm.updateViewLayout(r, p)
