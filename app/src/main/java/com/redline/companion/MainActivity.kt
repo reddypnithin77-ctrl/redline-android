@@ -21,6 +21,8 @@ class MainActivity : Activity() {
     private lateinit var content: LinearLayout
     private lateinit var nav: LinearLayout
     private var currentTab = "HOME"
+    private var overlayEnabled = false
+    private var homePowerButton: TextView? = null
     private val red = Color.rgb(244, 35,  sixty())
     private val bgColor = Color.rgb(9, 9, 13)
     private val panelColor = Color.rgb(25, 25, 33)
@@ -68,7 +70,7 @@ class MainActivity : Activity() {
 
     private fun renderTab() {
         content.removeAllViews(); nav.removeAllViews()
-        val tabs=listOf("HOME" to "⌂","FEATURES" to "✦","SUPPORT" to "?") 
+        val tabs=listOf("HOME" to "⌂","SUPPORT" to "?") 
         tabs.forEach { (name, glyph) ->
             val active=currentTab==name
             val b=TextView(this).apply { text="$glyph\n$name"; gravity=Gravity.CENTER; textSize=if(active)12f else 10f; typeface=if(active)Typeface.DEFAULT_BOLD else Typeface.DEFAULT; setTextColor(if(active) Color.WHITE else Color.GRAY); background=if(active) gradient(Color.rgb(210,22,48),Color.rgb(105,8,27),dp(16).toFloat()) else null; setPadding(dp(10),dp(10),dp(10),dp(10)); minHeight=dp(54); setOnClickListener { currentTab=name; renderTab() } }
@@ -76,13 +78,38 @@ class MainActivity : Activity() {
         }
         when(currentTab) {
             "HOME" -> {
-                heading("CONTROL CENTER","Your companion dashboard")
-                infoCard("FLOATING WINDOW","Open REDLINE controls over other apps","Start the draggable R bubble and access session tools.") {
-                    if(!Settings.canDrawOverlays(this)) startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,Uri.parse("package:$packageName")))
-                    else { val i=Intent(this,OverlayService::class.java); if(Build.VERSION.SDK_INT>=26) startForegroundService(i) else startService(i); Toast.makeText(this,"Floating controls starting",Toast.LENGTH_SHORT).show() }
+                val wrap=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER; setPadding(dp(8),dp(12),dp(8),dp(12)) }
+                val glow=TextView(this).apply {
+                    text="⏻"
+                    textSize=58f
+                    typeface=Typeface.DEFAULT_BOLD
+                    gravity=Gravity.CENTER
+                    setTextColor(Color.WHITE)
+                    background=gradient(Color.rgb(255,55,78),Color.rgb(105,3,27),dp(100).toFloat())
+                    elevation=dp(22).toFloat()
+                    isClickable=true
+                    isFocusable=true
+                    setOnClickListener {
+                        if(!overlayEnabled) {
+                            if(!Settings.canDrawOverlays(this@MainActivity)) {
+                                startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,Uri.parse("package:$packageName")))
+                                Toast.makeText(this@MainActivity,"Allow Display over other apps, then tap the power button again.",Toast.LENGTH_LONG).show()
+                            } else {
+                                val i=Intent(this@MainActivity,OverlayService::class.java)
+                                if(Build.VERSION.SDK_INT>=26) startForegroundService(i) else startService(i)
+                                overlayEnabled=true
+                                updatePowerButton()
+                            }
+                        } else {
+                            stopService(Intent(this@MainActivity,OverlayService::class.java))
+                            overlayEnabled=false
+                            updatePowerButton()
+                        }
+                    }
                 }
-                infoCard("SESSION TRACKER","Track your practice time","Start, pause and reset a simple session timer.") { currentTab="FEATURES"; renderTab() }
-                infoCard("QUICK STATUS","Standalone companion mode","REDLINE does not inject into or modify any game.") {}
+                homePowerButton=glow
+                wrap.addView(glow,LinearLayout.LayoutParams(dp(190),dp(190)))
+                content.addView(wrap,LinearLayout.LayoutParams(-1,-1))
             }
             "FEATURES" -> {
                 heading("FEATURES","Useful tools • no game modification")
@@ -100,6 +127,14 @@ class MainActivity : Activity() {
             }
         }
     }
+
+    private fun updatePowerButton() {
+        homePowerButton?.apply {
+            text=if(overlayEnabled) "⏻\nON" else "⏻"
+            background=if(overlayEnabled) gradient(Color.rgb(35,205,125),Color.rgb(5,95,61),dp(100).toFloat()) else gradient(Color.rgb(255,55,78),Color.rgb(105,3,27),dp(100).toFloat())
+        }
+    }
+    override fun onResume() { super.onResume(); if(::content.isInitialized && currentTab=="HOME" && !overlayEnabled && Settings.canDrawOverlays(this)) { /* ready for the next tap */ } }
 
     private fun heading(title:String, subtitle:String) {
         content.addView(TextView(this).apply { text=title; textSize=21f; typeface=Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE); setPadding(0,dp(12),0,dp(4)) })
