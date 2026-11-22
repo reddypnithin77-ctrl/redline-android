@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-    <application android:theme="@android:style/Theme.Material.Light.NoActionBar" android:label="REDLINE" android:allowBackup="false" android:supportsRtl="true">
+    <application android:theme="@android:style/Theme.Material.Light.NoActionBar" android:label="REDLINE" android:icon="@drawable/redline_logo" android:allowBackup="false" android:supportsRtl="true">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
