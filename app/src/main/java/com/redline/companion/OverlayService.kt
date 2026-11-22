@@ -20,11 +20,16 @@ class OverlayService : Service() {
     private var tab = "HOME"
     private val channelId = "redline_overlay"
     private var presetIndex = 0
+    private var panelScroll: ScrollView? = null
+    private var pendingScrollY = 0
     private val presets = listOf("Balanced", "Low", "Fast")
     private val controls = listOf(
-        "Session Timer", "Sensitivity Notes", "Recoil Practice",
-        "HUD Checklist", "Minimap Reminder", "Focus Mode",
-        "Audio Check", "Quick Notes"
+        "Aim Drill", "Line-of-Sight Trainer",
+        "Distance Practice", "Recoil Coach",
+        "Sensitivity Lab", "Reaction Trainer",
+        "Sound Awareness", "HUD Planner",
+        "Movement Trainer", "Crosshair Placement",
+        "Map Knowledge", "Session Analytics"
     )
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
@@ -175,7 +180,9 @@ class OverlayService : Service() {
         }
         val body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         scroll.addView(body)
+        panelScroll = scroll
         box.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        scroll.post { scroll.scrollTo(0, pendingScrollY) }
 
         if (tab == "HOME") {
             sectionLabel(body, "COMMAND CENTER")
@@ -207,7 +214,7 @@ class OverlayService : Service() {
         } else {
             sectionLabel(body, "PERSONAL TOOLKIT")
             body.addView(TextView(this).apply {
-                text = "Tap a tile or switch to enable its companion setting. These controls do not read or change game data."
+                text = "Tap a tile or switch to enable its companion setting. No enemy tracking, game injection or game-data access."
                 textSize = 9f; setTextColor(Color.rgb(183, 172, 185))
                 setPadding(dp(2), 0, dp(2), dp(8))
             })
@@ -250,6 +257,7 @@ class OverlayService : Service() {
         })
         tile.setOnClickListener {
             val next = !prefs.getBoolean(name, false)
+            pendingScrollY = panelScroll?.scrollY ?: 0
             prefs.edit().putBoolean(name, next).apply()
             Toast.makeText(this, "$name ${if (next) "ON" else "OFF"}", Toast.LENGTH_SHORT).show()
             renderPanel()
