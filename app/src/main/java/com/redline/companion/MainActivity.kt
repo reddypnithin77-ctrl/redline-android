@@ -71,8 +71,7 @@ class MainActivity : Activity() {
         val tabs=listOf("HOME" to "⌂","FEATURES" to "✦","SUPPORT" to "?") 
         tabs.forEach { (name, glyph) ->
             val active=currentTab==name
-            val b=TextView(this).apply { text="$glyph
-$name"; gravity=Gravity.CENTER; textSize=if(active)12f else 10f; typeface=if(active)Typeface.DEFAULT_BOLD else Typeface.DEFAULT; setTextColor(if(active) Color.WHITE else Color.GRAY); background=if(active) gradient(Color.rgb(210,22,48),Color.rgb(105,8,27),dp(16).toFloat()) else null; setPadding(dp(10),dp(10),dp(10),dp(10)); minHeight=dp(54); setOnClickListener { currentTab=name; renderTab() } }
+            val b=TextView(this).apply { text="$glyph\n$name"; gravity=Gravity.CENTER; textSize=if(active)12f else 10f; typeface=if(active)Typeface.DEFAULT_BOLD else Typeface.DEFAULT; setTextColor(if(active) Color.WHITE else Color.GRAY); background=if(active) gradient(Color.rgb(210,22,48),Color.rgb(105,8,27),dp(16).toFloat()) else null; setPadding(dp(10),dp(10),dp(10),dp(10)); minHeight=dp(54); setOnClickListener { currentTab=name; renderTab() } }
             nav.addView(b,LinearLayout.LayoutParams(0,-1,1f).apply { setMargins(dp(4),0,dp(4),0) })
         }
         when(currentTab) {
