@@ -47,8 +47,8 @@ class OverlayService : Service() {
     }
 
     private fun showBubble(){
-        val bubble=TextView(this).apply{text="R";textSize=22f;typeface=Typeface.DEFAULT_BOLD;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=bg(Color.rgb(255,48,68),Color.rgb(125,5,28),dp(50).toFloat());elevation=dp(16).toFloat()}
-        val p=WindowManager.LayoutParams(dp(58),dp(58),type(),WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,PixelFormat.TRANSLUCENT).apply{gravity=Gravity.TOP or Gravity.START;x=dp(18);y=dp(220)}
+        val bubble=TextView(this).apply{text="♛\nR";textSize=18f;typeface=Typeface.DEFAULT_BOLD;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=bg(Color.rgb(255,48,68),Color.rgb(125,5,28),dp(50).toFloat());elevation=dp(18).toFloat()}
+        val p=WindowManager.LayoutParams(dp(280),WindowManager.LayoutParams.WRAP_CONTENT,type(),WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,PixelFormat.TRANSLUCENT).apply{gravity=Gravity.TOP or Gravity.START;x=dp(18);y=dp(220)}
         root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;addView(bubble)}
         windowParams=p
         bubble.setOnTouchListener(object:View.OnTouchListener{
@@ -91,6 +91,8 @@ class OverlayService : Service() {
             }
             "FEATURES"->{
                 label("QUICK TOOLS")
+                button("AIM PRACTICE GUIDE"){Toast.makeText(this,"Practice drills only. No automated aiming.",Toast.LENGTH_LONG).show()}
+                button("MAP AWARENESS GUIDE"){Toast.makeText(this,"Use the in-game minimap and visual cues.",Toast.LENGTH_LONG).show()}
                 button("Sensitivity note: ${presets[presetIndex]}"){presetIndex=(presetIndex+1)%presets.size;getSharedPreferences("redline",MODE_PRIVATE).edit().putInt("preset",presetIndex).apply();Toast.makeText(this,"Saved reference preset: ${presets[presetIndex]}",Toast.LENGTH_SHORT).show();renderPanel()}
                 button("HUD & PRACTICE TIPS"){Toast.makeText(this,"Use the game's own settings and training area to practice.",Toast.LENGTH_LONG).show()}
                 button("SESSION TIMER"){tab="HOME";renderPanel()}
@@ -107,13 +109,13 @@ class OverlayService : Service() {
         val nav=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER}
         listOf("HOME","FEATURES","SUPPORT").forEach{t->
             val active=t==tab
-            val item=TextView(this).apply{text=when(t){"HOME"->"⌂";"FEATURES"->"✦";else->"?"}+"\n"+t;gravity=Gravity.CENTER;textSize=8f;typeface=Typeface.DEFAULT_BOLD;setTextColor(if(active)Color.WHITE else Color.LTGRAY);if(active)background=bg(Color.rgb(205,22,49),Color.rgb(110,8,30),dp(10).toFloat());setPadding(dp(5),dp(6),dp(5),dp(6));setOnClickListener{tab=t;renderPanel()}}
+            val item=TextView(this).apply{text=when(t){"HOME"->"⌂";"FEATURES"->"✦";else->"?"}+"\n"+t;gravity=Gravity.CENTER;textSize=9f;typeface=Typeface.DEFAULT_BOLD;setTextColor(if(active)Color.WHITE else Color.LTGRAY);if(active)background=bg(Color.rgb(205,22,49),Color.rgb(110,8,30),dp(10).toFloat());setPadding(dp(6),dp(8),dp(6),dp(8));minHeight=dp(48);setOnClickListener{tab=t;renderPanel()}}
             nav.addView(item,LinearLayout.LayoutParams(0,dp(42),1f).apply{setMargins(dp(2),0,dp(2),0)})
         }
         box.addView(nav)
     }
     private fun label(s:String){panel?.addView(TextView(this).apply{text=s;textSize=10f;letterSpacing=.12f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.LTGRAY);gravity=Gravity.CENTER;setPadding(0,dp(8),0,dp(5))})}
-    private fun button(s:String,action:()->Unit){panel?.addView(TextView(this).apply{text=s;textSize=11f;typeface=Typeface.DEFAULT_BOLD;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=bg(Color.rgb(91,23,40),Color.rgb(40,20,32),dp(12).toFloat());elevation=dp(4).toFloat();setPadding(dp(8),dp(12),dp(8),dp(12));setOnClickListener{animate().scaleX(.97f).scaleY(.97f).setDuration(70).withEndAction{animate().scaleX(1f).scaleY(1f).setDuration(80).start();action()}.start() }},LinearLayout.LayoutParams(-1,-2).apply{topMargin=dp(6)})}
+    private fun button(s:String,action:()->Unit){panel?.addView(TextView(this).apply{text=s;textSize=12f;typeface=Typeface.DEFAULT_BOLD;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=bg(Color.rgb(105,24,46),Color.rgb(38,18,31),dp(14).toFloat());elevation=dp(7).toFloat();setPadding(dp(10),dp(15),dp(10),dp(15));minHeight=dp(50);setOnClickListener{animate().scaleX(.97f).scaleY(.97f).setDuration(70).withEndAction{animate().scaleX(1f).scaleY(1f).setDuration(80).start();action()}.start() }},LinearLayout.LayoutParams(-1,-2).apply{topMargin=dp(6)})}
 
     override fun onStartCommand(intent:Intent?,flags:Int,startId:Int)=START_NOT_STICKY
     override fun onDestroy(){running=false;handler.removeCallbacks(tick);root?.let{try{wm.removeView(it)}catch(_:Exception){}};root=null;super.onDestroy()}
