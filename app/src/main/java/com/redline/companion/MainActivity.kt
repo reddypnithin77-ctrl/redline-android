@@ -36,7 +36,7 @@ class MainActivity : Activity() {
 
     private fun showLogin() {
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(28), dp(30), dp(28), dp(30)); background = gradient(Color.rgb(30,8,14), bgColor, 0f) }
-        root.addView(TextView(this).apply { text="REDLINE"; textSize=36f; typeface=Typeface.DEFAULT_BOLD; setTextColor(red); gravity=Gravity.CENTER })
+        root.addView(ImageView(this).apply { setImageResource(R.drawable.redline_logo); scaleType=ImageView.ScaleType.FIT_CENTER }, LinearLayout.LayoutParams(dp(142),dp(142)).apply { bottomMargin=dp(12) })\n        root.addView(TextView(this).apply { text="REDLINE"; textSize=36f; typeface=Typeface.DEFAULT_BOLD; setTextColor(red); gravity=Gravity.CENTER })
         root.addView(TextView(this).apply { text="GAMING COMPANION  •  ANDROID 15"; textSize=11f; letterSpacing=.18f; setTextColor(Color.LTGRAY); gravity=Gravity.CENTER; setPadding(0,dp(8),0,dp(30)) })
         val field = EditText(this).apply { hint="Enter access password"; inputType=InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD; setSingleLine(true); setTextColor(Color.WHITE); setHintTextColor(Color.GRAY); setPadding(dp(16),dp(10),dp(16),dp(10)); background=gradient(panelColor,Color.rgb(15,15,20),dp(16).toFloat()) }
         root.addView(field, LinearLayout.LayoutParams(-1,dp(56)))
@@ -53,7 +53,7 @@ class MainActivity : Activity() {
         val root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(bgColor) }
         val header=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(20),dp(22),dp(20),dp(16)); background=gradient(Color.rgb(55,9,20),Color.rgb(16,12,18),dp(22).toFloat()); elevation=dp(8).toFloat() }
         val brandRow=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL }
-        brandRow.addView(TextView(this).apply { text="R"; textSize=30f; typeface=Typeface.create("sans-serif-black",Typeface.BOLD); gravity=Gravity.CENTER; setTextColor(Color.WHITE); background=gradient(Color.rgb(255,45,68),Color.rgb(100,4,25),dp(50).toFloat()); elevation=dp(12).toFloat() },LinearLayout.LayoutParams(dp(58),dp(58)))
+        brandRow.addView(ImageView(this).apply { setImageResource(R.drawable.redline_logo); scaleType=ImageView.ScaleType.FIT_CENTER },LinearLayout.LayoutParams(dp(62),dp(62)))
         val brandText=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(12),0,0,0) }
         brandText.addView(TextView(this).apply { text="REDLINE"; textSize=24f; typeface=Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE); letterSpacing=.08f })
         brandText.addView(TextView(this).apply { text="GAMING COMPANION"; textSize=10f; letterSpacing=.16f; setTextColor(red) })
