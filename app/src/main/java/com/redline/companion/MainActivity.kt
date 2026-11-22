@@ -49,9 +49,9 @@ class MainActivity : Activity() {
     private fun showDashboard() {
         val root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(bgColor) }
         val header=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(20),dp(22),dp(20),dp(16)); background=gradient(Color.rgb(55,9,20),Color.rgb(16,12,18),dp(22).toFloat()); elevation=dp(8).toFloat() }
-        header.addView(TextView(this).apply { text="REDLINE  /  COMPANION"; textSize=23f; typeface=Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE) })
+        val brandRow=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL }\n        brandRow.addView(TextView(this).apply { text="R"; textSize=30f; typeface=Typeface.create("sans-serif-black",Typeface.BOLD); gravity=Gravity.CENTER; setTextColor(Color.WHITE); background=gradient(Color.rgb(255,45,68),Color.rgb(100,4,25),dp(50).toFloat()); elevation=dp(12).toFloat() },LinearLayout.LayoutParams(dp(58),dp(58)))\n        val brandText=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(12),0,0,0) }\n        brandText.addView(TextView(this).apply { text="REDLINE"; textSize=24f; typeface=Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE); letterSpacing=.08f })\n        brandText.addView(TextView(this).apply { text="GAMING COMPANION"; textSize=10f; letterSpacing=.16f; setTextColor(red) })\n        brandRow.addView(brandText)\n        header.addView(brandRow)
         header.addView(TextView(this).apply { text="●  READY TO RUN"; textSize=11f; letterSpacing=.14f; setTextColor(red); setPadding(0,dp(6),0,0) })
-        root.addView(header,LinearLayout.LayoutParams(-1,dp(104)).apply { setMargins(dp(14),dp(14),dp(14),dp(8)) })
+        root.addView(header,LinearLayout.LayoutParams(-1,dp(112)).apply { setMargins(dp(14),dp(14),dp(14),dp(8)) })
         content=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(8),dp(18),dp(12)) }
         root.addView(content,LinearLayout.LayoutParams(-1,0,1f))
         nav=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER; setPadding(dp(8),dp(8),dp(8),dp(12)); background=gradient(Color.rgb(28,20,27),Color.rgb(12,12,17),dp(22).toFloat()); elevation=dp(18).toFloat() }
@@ -65,7 +65,7 @@ class MainActivity : Activity() {
         val tabs=listOf("HOME" to "⌂","FEATURES" to "✦","SUPPORT" to "?") 
         tabs.forEach { (name, glyph) ->
             val active=currentTab==name
-            val b=TextView(this).apply { text="$glyph\n$name"; gravity=Gravity.CENTER; textSize=if(active)12f else 10f; typeface=if(active)Typeface.DEFAULT_BOLD else Typeface.DEFAULT; setTextColor(if(active) Color.WHITE else Color.GRAY); background=if(active) gradient(Color.rgb(210,22,48),Color.rgb(105,8,27),dp(16).toFloat()) else null; setPadding(dp(10),dp(7),dp(10),dp(7)); setOnClickListener { currentTab=name; renderTab() } }
+            val b=TextView(this).apply { text="$glyph\n$name"; gravity=Gravity.CENTER; textSize=if(active)12f else 10f; typeface=if(active)Typeface.DEFAULT_BOLD else Typeface.DEFAULT; setTextColor(if(active) Color.WHITE else Color.GRAY); background=if(active) gradient(Color.rgb(210,22,48),Color.rgb(105,8,27),dp(16).toFloat()) else null; setPadding(dp(10),dp(10),dp(10),dp(10)); minHeight=dp(54); setOnClickListener { currentTab=name; renderTab() } }
             nav.addView(b,LinearLayout.LayoutParams(0,-1,1f).apply { setMargins(dp(4),0,dp(4),0) })
         }
         when(currentTab) {
@@ -100,9 +100,9 @@ class MainActivity : Activity() {
         content.addView(TextView(this).apply { text=subtitle; textSize=12f; setTextColor(Color.GRAY); setPadding(0,0,0,dp(16)) })
     }
     private fun infoCard(title:String, subtitle:String, detail:String, action:()->Unit) {
-        val card=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(16),dp(14),dp(16),dp(14)); background=gradient(Color.rgb(38,35,45),Color.rgb(19,19,26),dp(18).toFloat()); elevation=dp(7).toFloat(); isClickable=true; isFocusable=true }
-        card.addView(TextView(this).apply { text=title; textSize=10f; letterSpacing=.14f; typeface=Typeface.DEFAULT_BOLD; setTextColor(red) })
-        card.addView(TextView(this).apply { text=subtitle; textSize=16f; typeface=Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE); setPadding(0,dp(7),0,dp(4)) })
+        val card=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(17),dp(18),dp(17)); background=gradient(Color.rgb(38,35,45),Color.rgb(19,19,26),dp(18).toFloat()); elevation=dp(7).toFloat(); isClickable=true; isFocusable=true }
+        card.addView(TextView(this).apply { text=title; textSize=11f; letterSpacing=.14f; typeface=Typeface.DEFAULT_BOLD; setTextColor(red) })
+        card.addView(TextView(this).apply { text=subtitle; textSize=17f; typeface=Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE); setPadding(0,dp(7),0,dp(4)) })
         card.addView(TextView(this).apply { text=detail; textSize=12f; setTextColor(Color.LTGRAY) })
         card.setOnClickListener { card.animate().scaleX(.975f).scaleY(.975f).setDuration(75).withEndAction { card.animate().scaleX(1f).scaleY(1f).setDuration(100).start(); action() }.start() }
         content.addView(card,LinearLayout.LayoutParams(-1,ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin=dp(12) })
