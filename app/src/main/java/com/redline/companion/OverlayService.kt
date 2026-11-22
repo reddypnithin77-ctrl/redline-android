@@ -4,225 +4,118 @@ import android.app.*
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.PixelFormat
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.view.*
 import android.widget.*
-import android.graphics.drawable.GradientDrawable
 
 class OverlayService : Service() {
     private lateinit var wm: WindowManager
     private var root: LinearLayout? = null
+    private var panel: LinearLayout? = null
     private var windowParams: WindowManager.LayoutParams? = null
-    private var expanded = false
-    private val channelId = "redline_overlay"
-    private val handler = Handler(Looper.getMainLooper())
-    private var elapsedSeconds = 0L
-    private var timerRunning = false
-    private var timerLabel: TextView? = null
-    private val presets = listOf("Balanced", "Low recoil practice", "Fast swipe")
-    private var presetIndex = 0
-    private val timerTick = object : Runnable {
-        override fun run() {
-            if (!timerRunning) return
-            elapsedSeconds++
-            updateTimerLabel()
-            handler.postDelayed(this, 1000L)
-        }
-    }
+    private var expanded=false
+    private var tab="HOME"
+    private val channelId="redline_overlay"
+    private val handler=Handler(Looper.getMainLooper())
+    private var elapsed=0L
+    private var running=false
+    private var timerLabel:TextView?=null
+    private var presetIndex=0
+    private val presets=listOf("Balanced","Low","Fast")
+    private val tick=object:Runnable { override fun run() { if(!running)return; elapsed++; updateTimer(); handler.postDelayed(this,1000) } }
+    private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
+    private fun bg(a:Int,b:Int,r:Float)=GradientDrawable(GradientDrawable.Orientation.TL_BR,intArrayOf(a,b)).apply{cornerRadius=r}
+    private fun updateTimer(){timerLabel?.text="SESSION  "+String.format("%02d:%02d",elapsed/60,elapsed%60)+(if(running)"  • LIVE" else "  • PAUSED")}
+    private fun type()=if(Build.VERSION.SDK_INT>=26) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE
 
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
-    private fun formatTime(total: Long): String {
-        val h = total / 3600
-        val m = (total % 3600) / 60
-        val s = total % 60
-        return if (h > 0) "%02d:%02d:%02d".format(h, m, s) else "%02d:%02d".format(m, s)
-    }
-    private fun updateTimerLabel() {
-        timerLabel?.text = "SESSION  " + formatTime(elapsedSeconds) + if (timerRunning) "  • RUNNING" else "  • PAUSED"
-    }
-
-    override fun onCreate() {
+    override fun onCreate(){
         super.onCreate()
-        try {
-            if (Build.VERSION.SDK_INT >= 26) {
-                val channel = NotificationChannel(channelId, "REDLINE overlay", NotificationManager.IMPORTANCE_LOW)
-                getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
-            }
-            val pending = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java),
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, channelId) else Notification.Builder(this)
-            startForeground(7, builder.setContentTitle("REDLINE is running")
-                .setContentText("Floating companion controls are active")
-                .setSmallIcon(android.R.drawable.ic_media_play).setContentIntent(pending).setOngoing(true).build())
-            wm = getSystemService(WINDOW_SERVICE) as WindowManager
-            presetIndex = getSharedPreferences("redline", MODE_PRIVATE).getInt("preset", 0).coerceIn(0, presets.lastIndex)
+        try{
+            if(Build.VERSION.SDK_INT>=26) getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(channelId,"REDLINE overlay",NotificationManager.IMPORTANCE_LOW))
+            val pi=PendingIntent.getActivity(this,0,Intent(this,MainActivity::class.java),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            val nb=if(Build.VERSION.SDK_INT>=26) Notification.Builder(this,channelId) else Notification.Builder(this)
+            startForeground(7,nb.setContentTitle("REDLINE is running").setContentText("Gaming companion controls active").setSmallIcon(android.R.drawable.ic_media_play).setContentIntent(pi).setOngoing(true).build())
+            wm=getSystemService(WINDOW_SERVICE) as WindowManager
+            presetIndex=getSharedPreferences("redline",MODE_PRIVATE).getInt("preset",0).coerceIn(0,2)
             showBubble()
-        } catch (e: Exception) {
-            Toast.makeText(this, "REDLINE overlay error: ${e.javaClass.simpleName}", Toast.LENGTH_LONG).show()
-            stopSelf()
-        }
+        }catch(e:Exception){Toast.makeText(this,"Overlay error: ${e.javaClass.simpleName}",Toast.LENGTH_LONG).show();stopSelf()}
     }
 
-    private fun bg(color: Int, radius: Float) = GradientDrawable().apply {
-        setColor(color)
-        cornerRadius = radius
-    }
-
-    private fun styledButton(label: String, action: () -> Unit): Button = Button(this).apply {
-        text = label
-        isAllCaps = false
-        setTextColor(Color.WHITE)
-        backgroundTintList = android.content.res.ColorStateList.valueOf(Color.rgb(75, 25, 32))
-        setOnClickListener { action() }
-    }
-
-    private fun showBubble() {
-        val bubble = TextView(this).apply {
-            text = "R"
-            textSize = 20f
-            gravity = Gravity.CENTER
-            setTextColor(Color.WHITE)
-            background = bg(Color.rgb(190, 18, 35), dp(50).toFloat())
-            elevation = dp(12).toFloat()
-        }
-        val type = if (Build.VERSION.SDK_INT >= 26) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            type,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = dp(24)
-            y = dp(220)
-        }
-        root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(bubble, LinearLayout.LayoutParams(dp(58), dp(58)))
-        }
-        windowParams = params
-        bubble.setOnTouchListener(object : View.OnTouchListener {
-            var downX = 0f
-            var downY = 0f
-            var startX = 0
-            var startY = 0
-            var moved = false
-            override fun onTouch(v: View, e: MotionEvent): Boolean {
-                when (e.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        downX = e.rawX; downY = e.rawY
-                        startX = params.x; startY = params.y
-                        moved = false
-                        return true
-                    }
-                    MotionEvent.ACTION_MOVE -> {
-                        val dx = (e.rawX - downX).toInt()
-                        val dy = (e.rawY - downY).toInt()
-                        if (kotlin.math.abs(dx) + kotlin.math.abs(dy) > dp(8)) moved = true
-                        params.x = startX + dx
-                        params.y = startY + dy
-                        root?.let { wm.updateViewLayout(it, params) }
-                        return true
-                    }
-                    MotionEvent.ACTION_UP -> {
-                        if (!moved) toggleMenu()
-                        return true
-                    }
-                }
-                return false
-            }
+    private fun showBubble(){
+        val bubble=TextView(this).apply{text="R";textSize=22f;typeface=Typeface.DEFAULT_BOLD;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=bg(Color.rgb(255,48,68),Color.rgb(125,5,28),dp(50).toFloat());elevation=dp(16).toFloat()}
+        val p=WindowManager.LayoutParams(dp(58),dp(58),type(),WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,PixelFormat.TRANSLUCENT).apply{gravity=Gravity.TOP or Gravity.START;x=dp(18);y=dp(220)}
+        root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;addView(bubble)}
+        windowParams=p
+        bubble.setOnTouchListener(object:View.OnTouchListener{
+            var sx=0f;var sy=0f;var px=0;var py=0;var moved=false
+            override fun onTouch(v:View,e:MotionEvent):Boolean{when(e.action){
+                MotionEvent.ACTION_DOWN->{sx=e.rawX;sy=e.rawY;px=p.x;py=p.y;moved=false;return true}
+                MotionEvent.ACTION_MOVE->{val dx=(e.rawX-sx).toInt();val dy=(e.rawY-sy).toInt();if(kotlin.math.abs(dx)+kotlin.math.abs(dy)>dp(7))moved=true;p.x=px+dx;p.y=py+dy;root?.let{wm.updateViewLayout(it,p)};return true}
+                MotionEvent.ACTION_UP->{if(!moved)toggle();return true}
+            };return false}
         })
-        wm.addView(root, params)
+        wm.addView(root,p)
     }
 
-    private fun toggleMenu() {
-        val current = root ?: return
-        val params = windowParams ?: return
-        if (expanded) {
-            if (current.childCount > 1) current.removeViews(1, current.childCount - 1)
-            expanded = false
-        } else {
-            val panel = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(12), dp(10), dp(12), dp(10))
-                background = bg(Color.rgb(22, 22, 26), dp(18).toFloat())
-                elevation = dp(14).toFloat()
-            }
-            panel.addView(TextView(this).apply {
-                text = "REDLINE"
-                textSize = 16f
-                setTextColor(Color.rgb(255, 55, 65))
-                gravity = Gravity.CENTER
-                setPadding(0, 0, 0, dp(6))
-            })
-            timerLabel = TextView(this).apply {
-                textSize = 13f
-                setTextColor(Color.WHITE)
-                gravity = Gravity.CENTER
-                setPadding(0, dp(5), 0, dp(5))
-            }
-            updateTimerLabel()
-            panel.addView(timerLabel)
-            panel.addView(styledButton(if (timerRunning) "Pause session timer" else "Start / resume timer") {
-                if (timerRunning) {
-                    timerRunning = false
-                    handler.removeCallbacks(timerTick)
-                } else {
-                    timerRunning = true
-                    handler.postDelayed(timerTick, 1000L)
-                }
-                updateTimerLabel()
-                refreshTimerButton(panel)
-            })
-            panel.addView(styledButton("Reset session timer") {
-                timerRunning = false
-                handler.removeCallbacks(timerTick)
-                elapsedSeconds = 0L
-                updateTimerLabel()
-                refreshTimerButton(panel)
-            })
-            panel.addView(styledButton("Sensitivity preset: ${presets[presetIndex]}") {
-                presetIndex = (presetIndex + 1) % presets.size
-                getSharedPreferences("redline", MODE_PRIVATE).edit().putInt("preset", presetIndex).apply()
-                Toast.makeText(this, "Saved preset: ${presets[presetIndex]}. This is a reference only; it does not change game settings.", Toast.LENGTH_LONG).show()
-                refreshPresetButton(panel)
-            })
-            panel.addView(styledButton("HUD & practice guide") {
-                Toast.makeText(this, "HUD tip: keep fire and aim controls comfortably reachable; adjust sensitivity in the game's own settings and test changes in training mode.", Toast.LENGTH_LONG).show()
-            })
-            panel.addView(styledButton("Close menu") { toggleMenu() })
-            current.addView(panel, LinearLayout.LayoutParams(dp(230), WindowManager.LayoutParams.WRAP_CONTENT))
-            expanded = true
+    private fun toggle(){
+        val r=root?:return
+        val p=windowParams?:return
+        if(expanded){if(r.childCount>1)r.removeViews(1,r.childCount-1);panel=null;expanded=false}
+        else{
+            panel=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(12),dp(12),dp(12),dp(10));background=bg(Color.rgb(42,34,44),Color.rgb(13,13,19),dp(20).toFloat());elevation=dp(20).toFloat()}
+            r.addView(panel,LinearLayout.LayoutParams(dp(260),-2).apply{topMargin=dp(8)})
+            expanded=true;renderPanel()
         }
-        try {
-            wm.updateViewLayout(current, params)
-        } catch (e: Exception) {
-            Toast.makeText(this, "Could not resize REDLINE menu: ${e.javaClass.simpleName}", Toast.LENGTH_SHORT).show()
+        wm.updateViewLayout(r,p)
+    }
+
+    private fun renderPanel(){
+        val box=panel?:return
+        box.removeAllViews()
+        box.addView(TextView(this).apply{text="REDLINE";textSize=19f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.rgb(255,55,75));gravity=Gravity.CENTER;letterSpacing=.12f})
+        box.addView(TextView(this).apply{text="COMPANION  •  ANDROID 15";textSize=9f;setTextColor(Color.LTGRAY);gravity=Gravity.CENTER;setPadding(0,dp(3),0,dp(10))})
+        when(tab){
+            "HOME"->{
+                val status=TextView(this).apply{text="PRACTICE SESSION";textSize=10f;setTextColor(Color.LTGRAY);gravity=Gravity.CENTER}
+                box.addView(status)
+                timerLabel=TextView(this).apply{textSize=22f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE);gravity=Gravity.CENTER;setPadding(0,dp(5),0,dp(8))}
+                box.addView(timerLabel);updateTimer()
+                button(if(running)"PAUSE TIMER" else "START / RESUME"){running=!running;handler.removeCallbacks(tick);if(running)handler.postDelayed(tick,1000);renderPanel()}
+                button("RESET TIMER"){running=false;handler.removeCallbacks(tick);elapsed=0;updateTimer();renderPanel()}
+                button("OPEN FEATURES"){tab="FEATURES";renderPanel()}
+            }
+            "FEATURES"->{
+                label("QUICK TOOLS")
+                button("Sensitivity note: ${presets[presetIndex]}"){presetIndex=(presetIndex+1)%presets.size;getSharedPreferences("redline",MODE_PRIVATE).edit().putInt("preset",presetIndex).apply();Toast.makeText(this,"Saved reference preset: ${presets[presetIndex]}",Toast.LENGTH_SHORT).show();renderPanel()}
+                button("HUD & PRACTICE TIPS"){Toast.makeText(this,"Use the game's own settings and training area to practice.",Toast.LENGTH_LONG).show()}
+                button("SESSION TIMER"){tab="HOME";renderPanel()}
+            }
+            else->{
+                label("SUPPORT")
+                button("OVERLAY PERMISSION HELP"){Toast.makeText(this,"Enable Display over other apps for REDLINE in Android settings.",Toast.LENGTH_LONG).show()}
+                button("HOW TO USE"){Toast.makeText(this,"Drag the R bubble to move it. Tap once to expand or collapse.",Toast.LENGTH_LONG).show()}
+                button("COMPANION MODE ONLY"){Toast.makeText(this,"REDLINE does not inject into or modify games.",Toast.LENGTH_LONG).show()}
+            }
         }
+        val divider=View(this).apply{setBackgroundColor(Color.rgb(75,45,57))}
+        box.addView(divider,LinearLayout.LayoutParams(-1,dp(1)).apply{topMargin=dp(8);bottomMargin=dp(7)})
+        val nav=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER}
+        listOf("HOME","FEATURES","SUPPORT").forEach{t->
+            val active=t==tab
+            val item=TextView(this).apply{text=when(t){"HOME"->"⌂";"FEATURES"->"✦";else->"?"}+"\n"+t;gravity=Gravity.CENTER;textSize=8f;typeface=Typeface.DEFAULT_BOLD;setTextColor(if(active)Color.WHITE else Color.LTGRAY);if(active)background=bg(Color.rgb(205,22,49),Color.rgb(110,8,30),dp(10).toFloat());setPadding(dp(5),dp(6),dp(5),dp(6));setOnClickListener{tab=t;renderPanel()}}
+            nav.addView(item,LinearLayout.LayoutParams(0,dp(42),1f).apply{setMargins(dp(2),0,dp(2),0)})
+        }
+        box.addView(nav)
     }
+    private fun label(s:String){panel?.addView(TextView(this).apply{text=s;textSize=10f;letterSpacing=.12f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.LTGRAY);gravity=Gravity.CENTER;setPadding(0,dp(8),0,dp(5))})}
+    private fun button(s:String,action:()->Unit){panel?.addView(TextView(this).apply{text=s;textSize=11f;typeface=Typeface.DEFAULT_BOLD;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=bg(Color.rgb(91,23,40),Color.rgb(40,20,32),dp(12).toFloat());elevation=dp(4).toFloat();setPadding(dp(8),dp(12),dp(8),dp(12));setOnClickListener{animate().scaleX(.97f).scaleY(.97f).setDuration(70).withEndAction{animate().scaleX(1f).scaleY(1f).setDuration(80).start();action()}.start() }},LinearLayout.LayoutParams(-1,-2).apply{topMargin=dp(6)})}
 
-    private fun refreshTimerButton(panel: LinearLayout) {
-        // Timer state is visible in the status line; reopening the menu refreshes the action label.
-        updateTimerLabel()
-    }
-    private fun refreshPresetButton(panel: LinearLayout) {
-        // The chosen preset is persisted and shown in a confirmation toast.
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_NOT_STICKY
-
-    override fun onDestroy() {
-        timerRunning = false
-        handler.removeCallbacks(timerTick)
-        root?.let { try { wm.removeView(it) } catch (_: Exception) {} }
-        root = null
-        windowParams = null
-        super.onDestroy()
-    }
-
-    override fun onBind(intent: Intent?): IBinder? = null
+    override fun onStartCommand(intent:Intent?,flags:Int,startId:Int)=START_NOT_STICKY
+    override fun onDestroy(){running=false;handler.removeCallbacks(tick);root?.let{try{wm.removeView(it)}catch(_:Exception){}};root=null;super.onDestroy()}
+    override fun onBind(intent:Intent?):IBinder?=null
 }
