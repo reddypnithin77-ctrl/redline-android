@@ -21,16 +21,10 @@ class OverlayService : Service() {
     private var expanded=false
     private var tab="HOME"
     private val channelId="redline_overlay"
-    private val handler=Handler(Looper.getMainLooper())
-    private var elapsed=0L
-    private var running=false
-    private var timerLabel:TextView?=null
     private var presetIndex=0
     private val presets=listOf("Balanced","Low","Fast")
-    private val tick=object:Runnable { override fun run() { if(!running)return; elapsed++; updateTimer(); handler.postDelayed(this,1000) } }
     private fun dp(v:Int)=(v*resources.displayMetrics.density).toInt()
     private fun bg(a:Int,b:Int,r:Float)=GradientDrawable(GradientDrawable.Orientation.TL_BR,intArrayOf(a,b)).apply{cornerRadius=r}
-    private fun updateTimer(){timerLabel?.text="SESSION  "+String.format("%02d:%02d",elapsed/60,elapsed%60)+(if(running)"  • LIVE" else "  • PAUSED")}
     private fun type()=if(Build.VERSION.SDK_INT>=26) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY else WindowManager.LayoutParams.TYPE_PHONE
 
     override fun onCreate(){
@@ -81,27 +75,24 @@ class OverlayService : Service() {
         box.addView(TextView(this).apply{text="COMPANION  •  ANDROID 15";textSize=9f;setTextColor(Color.LTGRAY);gravity=Gravity.CENTER;setPadding(0,dp(3),0,dp(10))})
         when(tab){
             "HOME"->{
-                val status=TextView(this).apply{text="PRACTICE SESSION";textSize=10f;setTextColor(Color.LTGRAY);gravity=Gravity.CENTER}
-                box.addView(status)
-                timerLabel=TextView(this).apply{textSize=22f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE);gravity=Gravity.CENTER;setPadding(0,dp(5),0,dp(8))}
-                box.addView(timerLabel);updateTimer()
-                button(if(running)"PAUSE TIMER" else "START / RESUME"){running=!running;handler.removeCallbacks(tick);if(running)handler.postDelayed(tick,1000);renderPanel()}
-                button("RESET TIMER"){running=false;handler.removeCallbacks(tick);elapsed=0;updateTimer();renderPanel()}
-                button("OPEN FEATURES"){tab="FEATURES";renderPanel()}
+                label("QUICK ACCESS")
+                button("AIM TRAINING DRILLS"){Toast.makeText(this,"Try tracking, flick and target-switch drills in the game's training area.",Toast.LENGTH_LONG).show()}
+                button("DISTANCE REFERENCE"){Toast.makeText(this,"Use in-game landmarks and the map scale to estimate range manually.",Toast.LENGTH_LONG).show()}
+                button("SENSITIVITY PRESET: ${presets[presetIndex]}"){presetIndex=(presetIndex+1)%presets.size;getSharedPreferences("redline",MODE_PRIVATE).edit().putInt("preset",presetIndex).apply();Toast.makeText(this,"Saved reference preset: ${presets[presetIndex]}",Toast.LENGTH_SHORT).show();renderPanel()}
+                button("MAP AWARENESS TIPS"){Toast.makeText(this,"Check the in-game minimap, cover and visible landmarks.",Toast.LENGTH_LONG).show()}
             }
             "FEATURES"->{
-                label("QUICK TOOLS")
-                button("AIM PRACTICE GUIDE"){Toast.makeText(this,"Practice drills only. No automated aiming.",Toast.LENGTH_LONG).show()}
-                button("MAP AWARENESS GUIDE"){Toast.makeText(this,"Use the in-game minimap and visual cues.",Toast.LENGTH_LONG).show()}
-                button("Sensitivity note: ${presets[presetIndex]}"){presetIndex=(presetIndex+1)%presets.size;getSharedPreferences("redline",MODE_PRIVATE).edit().putInt("preset",presetIndex).apply();Toast.makeText(this,"Saved reference preset: ${presets[presetIndex]}",Toast.LENGTH_SHORT).show();renderPanel()}
-                button("HUD & PRACTICE TIPS"){Toast.makeText(this,"Use the game's own settings and training area to practice.",Toast.LENGTH_LONG).show()}
-                button("SESSION TIMER"){tab="HOME";renderPanel()}
+                label("PRACTICE TOOLS")
+                button("TRACKING DRILL"){Toast.makeText(this,"Follow a moving target smoothly in the training area.",Toast.LENGTH_LONG).show()}
+                button("FLICK DRILL"){Toast.makeText(this,"Practice short, controlled flicks between training targets.",Toast.LENGTH_LONG).show()}
+                button("DISTANCE REFERENCE"){Toast.makeText(this,"Estimate distance using the game's own map and landmarks.",Toast.LENGTH_LONG).show()}
+                button("HUD & COMFORT CHECK"){Toast.makeText(this,"Review button placement, visibility and comfortable reach.",Toast.LENGTH_LONG).show()}
             }
             else->{
                 label("SUPPORT")
                 button("OVERLAY PERMISSION HELP"){Toast.makeText(this,"Enable Display over other apps for REDLINE in Android settings.",Toast.LENGTH_LONG).show()}
                 button("HOW TO USE"){Toast.makeText(this,"Drag the R bubble to move it. Tap once to expand or collapse.",Toast.LENGTH_LONG).show()}
-                button("COMPANION MODE ONLY"){Toast.makeText(this,"REDLINE does not inject into or modify games.",Toast.LENGTH_LONG).show()}
+                button("COMPANION MODE"){Toast.makeText(this,"REDLINE works independently and does not read or change game data.",Toast.LENGTH_LONG).show()}
             }
         }
         val divider=View(this).apply{setBackgroundColor(Color.rgb(75,45,57))}
@@ -118,6 +109,6 @@ class OverlayService : Service() {
     private fun button(s:String,action:()->Unit){panel?.addView(TextView(this).apply{text=s;textSize=12f;typeface=Typeface.DEFAULT_BOLD;gravity=Gravity.CENTER;setTextColor(Color.WHITE);background=bg(Color.rgb(105,24,46),Color.rgb(38,18,31),dp(14).toFloat());elevation=dp(7).toFloat();setPadding(dp(10),dp(15),dp(10),dp(15));minHeight=dp(50);setOnClickListener{animate().scaleX(.97f).scaleY(.97f).setDuration(70).withEndAction{animate().scaleX(1f).scaleY(1f).setDuration(80).start();action()}.start() }},LinearLayout.LayoutParams(-1,-2).apply{topMargin=dp(6)})}
 
     override fun onStartCommand(intent:Intent?,flags:Int,startId:Int)=START_NOT_STICKY
-    override fun onDestroy(){running=false;handler.removeCallbacks(tick);root?.let{try{wm.removeView(it)}catch(_:Exception){}};root=null;super.onDestroy()}
+    override fun onDestroy(){root?.let{try{wm.removeView(it)}catch(_:Exception){}};root=null;super.onDestroy()}
     override fun onBind(intent:Intent?):IBinder?=null
 }
