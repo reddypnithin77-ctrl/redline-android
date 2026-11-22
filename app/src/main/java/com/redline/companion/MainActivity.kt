@@ -49,6 +49,7 @@ class MainActivity : Activity() {
     }
 
     private fun showDashboard() {
+        overlayEnabled = getSharedPreferences("redline", MODE_PRIVATE).getBoolean("overlay_enabled", false)
         val root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(bgColor) }
         val header=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(20),dp(22),dp(20),dp(16)); background=gradient(Color.rgb(55,9,20),Color.rgb(16,12,18),dp(22).toFloat()); elevation=dp(8).toFloat() }
         val brandRow=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL }
@@ -98,11 +99,13 @@ class MainActivity : Activity() {
                                 val i=Intent(this@MainActivity,OverlayService::class.java)
                                 if(Build.VERSION.SDK_INT>=26) startForegroundService(i) else startService(i)
                                 overlayEnabled=true
+                                getSharedPreferences("redline", MODE_PRIVATE).edit().putBoolean("overlay_enabled", true).apply()
                                 updatePowerButton()
                             }
                         } else {
                             stopService(Intent(this@MainActivity,OverlayService::class.java))
                             overlayEnabled=false
+                            getSharedPreferences("redline", MODE_PRIVATE).edit().putBoolean("overlay_enabled", false).apply()
                             updatePowerButton()
                         }
                     }
