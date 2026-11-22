@@ -5,7 +5,9 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.view.*
 import android.widget.*
 import android.graphics.drawable.GradientDrawable
@@ -16,8 +18,31 @@ class OverlayService : Service() {
     private var windowParams: WindowManager.LayoutParams? = null
     private var expanded = false
     private val channelId = "redline_overlay"
+    private val handler = Handler(Looper.getMainLooper())
+    private var elapsedSeconds = 0L
+    private var timerRunning = false
+    private var timerLabel: TextView? = null
+    private val presets = listOf("Balanced", "Low recoil practice", "Fast swipe")
+    private var presetIndex = 0
+    private val timerTick = object : Runnable {
+        override fun run() {
+            if (!timerRunning) return
+            elapsedSeconds++
+            updateTimerLabel()
+            handler.postDelayed(this, 1000L)
+        }
+    }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+    private fun formatTime(total: Long): String {
+        val h = total / 3600
+        val m = (total % 3600) / 60
+        val s = total % 60
+        return if (h > 0) "%02d:%02d:%02d".format(h, m, s) else "%02d:%02d".format(m, s)
+    }
+    private fun updateTimerLabel() {
+        timerLabel?.text = "SESSION  " + formatTime(elapsedSeconds) + if (timerRunning) "  • RUNNING" else "  • PAUSED"
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -33,6 +58,7 @@ class OverlayService : Service() {
                 .setContentText("Floating companion controls are active")
                 .setSmallIcon(android.R.drawable.ic_media_play).setContentIntent(pending).setOngoing(true).build())
             wm = getSystemService(WINDOW_SERVICE) as WindowManager
+            presetIndex = getSharedPreferences("redline", MODE_PRIVATE).getInt("preset", 0).coerceIn(0, presets.lastIndex)
             showBubble()
         } catch (e: Exception) {
             Toast.makeText(this, "REDLINE overlay error: ${e.javaClass.simpleName}", Toast.LENGTH_LONG).show()
@@ -43,6 +69,14 @@ class OverlayService : Service() {
     private fun bg(color: Int, radius: Float) = GradientDrawable().apply {
         setColor(color)
         cornerRadius = radius
+    }
+
+    private fun styledButton(label: String, action: () -> Unit): Button = Button(this).apply {
+        text = label
+        isAllCaps = false
+        setTextColor(Color.WHITE)
+        backgroundTintList = android.content.res.ColorStateList.valueOf(Color.rgb(75, 25, 32))
+        setOnClickListener { action() }
     }
 
     private fun showBubble() {
@@ -80,10 +114,8 @@ class OverlayService : Service() {
             override fun onTouch(v: View, e: MotionEvent): Boolean {
                 when (e.action) {
                     MotionEvent.ACTION_DOWN -> {
-                        downX = e.rawX
-                        downY = e.rawY
-                        startX = params.x
-                        startY = params.y
+                        downX = e.rawX; downY = e.rawY
+                        startX = params.x; startY = params.y
                         moved = false
                         return true
                     }
@@ -127,19 +159,43 @@ class OverlayService : Service() {
                 gravity = Gravity.CENTER
                 setPadding(0, 0, 0, dp(6))
             })
-            listOf("Session timer: ready", "Quick notes", "Aim practice: offline", "Close menu").forEach { label ->
-                panel.addView(Button(this).apply {
-                    text = label
-                    isAllCaps = false
-                    setTextColor(Color.WHITE)
-                    backgroundTintList = android.content.res.ColorStateList.valueOf(Color.rgb(65, 25, 30))
-                    setOnClickListener {
-                        if (label == "Close menu") toggleMenu()
-                        else Toast.makeText(this@OverlayService, label, Toast.LENGTH_SHORT).show()
-                    }
-                })
+            timerLabel = TextView(this).apply {
+                textSize = 13f
+                setTextColor(Color.WHITE)
+                gravity = Gravity.CENTER
+                setPadding(0, dp(5), 0, dp(5))
             }
-            current.addView(panel, LinearLayout.LayoutParams(dp(220), WindowManager.LayoutParams.WRAP_CONTENT))
+            updateTimerLabel()
+            panel.addView(timerLabel)
+            panel.addView(styledButton(if (timerRunning) "Pause session timer" else "Start / resume timer") {
+                if (timerRunning) {
+                    timerRunning = false
+                    handler.removeCallbacks(timerTick)
+                } else {
+                    timerRunning = true
+                    handler.postDelayed(timerTick, 1000L)
+                }
+                updateTimerLabel()
+                refreshTimerButton(panel)
+            })
+            panel.addView(styledButton("Reset session timer") {
+                timerRunning = false
+                handler.removeCallbacks(timerTick)
+                elapsedSeconds = 0L
+                updateTimerLabel()
+                refreshTimerButton(panel)
+            })
+            panel.addView(styledButton("Sensitivity preset: ${presets[presetIndex]}") {
+                presetIndex = (presetIndex + 1) % presets.size
+                getSharedPreferences("redline", MODE_PRIVATE).edit().putInt("preset", presetIndex).apply()
+                Toast.makeText(this, "Saved preset: ${presets[presetIndex]}. This is a reference only; it does not change game settings.", Toast.LENGTH_LONG).show()
+                refreshPresetButton(panel)
+            })
+            panel.addView(styledButton("HUD & practice guide") {
+                Toast.makeText(this, "HUD tip: keep fire and aim controls comfortably reachable; adjust sensitivity in the game's own settings and test changes in training mode.", Toast.LENGTH_LONG).show()
+            })
+            panel.addView(styledButton("Close menu") { toggleMenu() })
+            current.addView(panel, LinearLayout.LayoutParams(dp(230), WindowManager.LayoutParams.WRAP_CONTENT))
             expanded = true
         }
         try {
@@ -149,9 +205,19 @@ class OverlayService : Service() {
         }
     }
 
+    private fun refreshTimerButton(panel: LinearLayout) {
+        // Timer state is visible in the status line; reopening the menu refreshes the action label.
+        updateTimerLabel()
+    }
+    private fun refreshPresetButton(panel: LinearLayout) {
+        // The chosen preset is persisted and shown in a confirmation toast.
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_NOT_STICKY
 
     override fun onDestroy() {
+        timerRunning = false
+        handler.removeCallbacks(timerTick)
         root?.let { try { wm.removeView(it) } catch (_: Exception) {} }
         root = null
         windowParams = null
