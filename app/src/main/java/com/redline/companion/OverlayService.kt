@@ -21,7 +21,11 @@ class OverlayService : Service() {
     private val channelId = "redline_overlay"
     private var presetIndex = 0
     private val presets = listOf("Balanced", "Low", "Fast")
-    private val controlNames = listOf("Silent Aim", "ESP Line", "Distance", "Headshot Assist", "Target Indicator", "Radar Pulse", "Recoil Guide", "Quick Switch")
+    private val controls = listOf(
+        "Session Timer", "Sensitivity Notes", "Recoil Practice",
+        "HUD Checklist", "Minimap Reminder", "Focus Mode",
+        "Audio Check", "Quick Notes"
+    )
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
     private fun bg(a: Int, b: Int, r: Float) =
@@ -96,15 +100,14 @@ class OverlayService : Service() {
         } else {
             panel = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(12), dp(11), dp(12), dp(10))
-                background = bg(Color.rgb(49, 24, 39), Color.rgb(10, 10, 16), dp(22).toFloat())
+                setPadding(dp(14), dp(12), dp(14), dp(12))
+                background = bg(Color.rgb(34, 19, 30), Color.rgb(8, 9, 14), dp(24).toFloat())
                 elevation = dp(24).toFloat()
             }
-            r.addView(panel, LinearLayout.LayoutParams(dp(260), dp(370)).apply { topMargin = dp(8) })
+            r.addView(panel, LinearLayout.LayoutParams(dp(292), dp(500)).apply { topMargin = dp(8) })
             expanded = true
-            // Grow the WindowManager surface so Android does not clip the panel below the bubble.
-            p.width = dp(280)
-            p.height = dp(450)
+            p.width = dp(310)
+            p.height = dp(570)
             renderPanel()
         }
         wm.updateViewLayout(r, p)
@@ -117,127 +120,176 @@ class OverlayService : Service() {
         val brand = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         brand.addView(ImageView(this).apply {
             setImageResource(R.drawable.redline_logo); scaleType = ImageView.ScaleType.FIT_CENTER
-        }, LinearLayout.LayoutParams(dp(38), dp(38)))
-        val brandText = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(9), 0, 0, 0) }
+        }, LinearLayout.LayoutParams(dp(42), dp(42)))
+        val brandText = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(10), 0, 0, 0) }
         brandText.addView(TextView(this).apply {
-            text = "REDLINE"; textSize = 17f; typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE); letterSpacing = .1f
+            text = "REDLINE"; textSize = 19f; typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE); letterSpacing = .08f
         })
         brandText.addView(TextView(this).apply {
-            text = "GAMING COMPANION"; textSize = 8f; letterSpacing = .13f
+            text = "TACTICAL TRAINING COMPANION"; textSize = 8f; letterSpacing = .12f
             setTextColor(Color.rgb(255, 91, 111))
         })
         brand.addView(brandText, LinearLayout.LayoutParams(0, -2, 1f))
-        brand.addView(TextView(this).apply {
-            text = "● LIVE"; textSize = 9f; typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.rgb(105, 235, 165)); gravity = Gravity.CENTER
-            setPadding(dp(8), dp(6), dp(8), dp(6))
-            background = bg(Color.rgb(20, 65, 48), Color.rgb(14, 36, 31), dp(12).toFloat())
-        })
+        val close = TextView(this).apply {
+            text = "×"; textSize = 25f; gravity = Gravity.CENTER
+            setTextColor(Color.WHITE); background = bg(Color.rgb(75, 27, 43), Color.rgb(35, 15, 27), dp(12).toFloat())
+            setOnClickListener { toggle() }
+        }
+        brand.addView(close, LinearLayout.LayoutParams(dp(38), dp(38)))
         box.addView(brand)
-        box.addView(View(this).apply { setBackgroundColor(Color.rgb(86, 42, 58)) },
-            LinearLayout.LayoutParams(-1, dp(1)).apply { topMargin = dp(9); bottomMargin = dp(5) })
 
-        val scroll = ScrollView(this).apply { isFillViewport = false; overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS }
-        val body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(3), 0, dp(5)) }
+        val status = TextView(this).apply {
+            text = "●  COMPANION ACTIVE     •     PRESET: ${presets[presetIndex].uppercase()}"
+            textSize = 8f; letterSpacing = .04f; typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.rgb(110, 235, 170))
+            setPadding(dp(3), dp(9), dp(3), dp(9))
+        }
+        box.addView(status)
+
+        // Tabs are deliberately placed at the top, always visible without scrolling.
+        val nav = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER
+            background = bg(Color.rgb(23, 20, 28), Color.rgb(15, 13, 20), dp(15).toFloat())
+            setPadding(dp(4), dp(4), dp(4), dp(4))
+        }
+        listOf("HOME" to "⌂", "FEATURES" to "✦").forEach { (name, glyph) ->
+            val active = tab == name
+            val item = TextView(this).apply {
+                text = "$glyph   $name"; gravity = Gravity.CENTER; textSize = 11f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(if (active) Color.WHITE else Color.rgb(165, 155, 166))
+                background = if (active) bg(Color.rgb(225, 35, 65), Color.rgb(113, 8, 33), dp(12).toFloat()) else null
+                setPadding(dp(8), dp(12), dp(8), dp(12))
+                setOnClickListener { tab = name; renderPanel() }
+            }
+            nav.addView(item, LinearLayout.LayoutParams(0, dp(44), 1f).apply { setMargins(dp(3), 0, dp(3), 0) })
+        }
+        box.addView(nav)
+
+        val scroll = ScrollView(this).apply {
+            isFillViewport = false
+            overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+            clipToPadding = false
+            setPadding(0, dp(8), 0, dp(4))
+        }
+        val body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         scroll.addView(body)
         box.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
 
         if (tab == "HOME") {
-            label(body, "QUICK ACCESS")
-            button(body, "AIM TRAINING DRILLS", "Practice tracking, flick and target-switch drills.") {
-                Toast.makeText(this, "Practice these drills in the game's training area.", Toast.LENGTH_LONG).show()
+            sectionLabel(body, "COMMAND CENTER")
+            val hero = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(15), dp(15), dp(15), dp(15))
+                background = bg(Color.rgb(91, 20, 43), Color.rgb(29, 17, 31), dp(18).toFloat())
             }
-            button(body, "DISTANCE REFERENCE", "Manual range-estimation tips") {
-                Toast.makeText(this, "Use in-game landmarks and the map scale to estimate range manually.", Toast.LENGTH_LONG).show()
-            }
-            button(body, "SENSITIVITY: ${presets[presetIndex].uppercase()}", "Tap to cycle your saved reference preset") {
+            hero.addView(TextView(this).apply {
+                text = "READY FOR YOUR NEXT SESSION"; textSize = 13f
+                typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE)
+            })
+            hero.addView(TextView(this).apply {
+                text = "Training tools, quick references and personal setup notes in one place."
+                textSize = 10f; setTextColor(Color.rgb(218, 194, 204)); setPadding(0, dp(6), 0, 0)
+            })
+            body.addView(hero, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+            actionCard(body, "SENSITIVITY PRESET", presets[presetIndex].uppercase(), "Tap to cycle Balanced / Low / Fast") {
                 presetIndex = (presetIndex + 1) % presets.size
                 getSharedPreferences("redline", MODE_PRIVATE).edit().putInt("preset", presetIndex).apply()
                 renderPanel()
             }
-            button(body, "MAP AWARENESS TIPS", "Minimap, cover and landmark reminders") {
-                Toast.makeText(this, "Check the in-game minimap, cover and visible landmarks.", Toast.LENGTH_LONG).show()
+            actionCard(body, "PRACTICE ROUTINE", "Aim • tracking • movement", "Open a simple practice checklist") {
+                Toast.makeText(this, "Practice tracking, flicks and movement in the training area.", Toast.LENGTH_LONG).show()
+            }
+            actionCard(body, "SESSION NOTES", "Keep your setup consistent", "Use Quick Notes in Features to track changes") {
+                tab = "FEATURES"; renderPanel()
             }
         } else {
-            label(body, "FEATURES")
+            sectionLabel(body, "PERSONAL TOOLKIT")
             body.addView(TextView(this).apply {
-                text = "Visual preferences only • no game access"
-                textSize = 9f; setTextColor(Color.LTGRAY); gravity = Gravity.CENTER
-                setPadding(0, 0, 0, dp(7))
+                text = "Tap a tile or switch to enable its companion setting. These controls do not read or change game data."
+                textSize = 9f; setTextColor(Color.rgb(183, 172, 185))
+                setPadding(dp(2), 0, dp(2), dp(8))
             })
-            controlNames.chunked(2).forEach { pair ->
+            controls.chunked(2).forEach { pair ->
                 val line = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
-                pair.forEach { name -> controlSwitch(name, line) }
-                if (pair.size == 1) line.addView(View(this), LinearLayout.LayoutParams(0, dp(1), 1f))
-                body.addView(line, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
+                pair.forEach { controlTile(it, line) }
+                body.addView(line, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
             }
         }
-
-        box.addView(View(this).apply { setBackgroundColor(Color.rgb(86, 42, 58)) },
-            LinearLayout.LayoutParams(-1, dp(1)).apply { topMargin = dp(5); bottomMargin = dp(7) })
-        val nav = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
-        listOf("HOME" to "⌂", "FEATURES" to "✦").forEach { (name, glyph) ->
-            val active = name == tab
-            val item = TextView(this).apply {
-                text = "$glyph   $name"; gravity = Gravity.CENTER; textSize = 11f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(if (active) Color.WHITE else Color.LTGRAY)
-                background = if (active) bg(Color.rgb(218, 28, 58), Color.rgb(112, 7, 31), dp(13).toFloat()) else null
-                setPadding(dp(8), dp(9), dp(8), dp(9))
-                setOnClickListener { tab = name; renderPanel() }
-            }
-            nav.addView(item, LinearLayout.LayoutParams(0, dp(40), 1f).apply { setMargins(dp(3), 0, dp(3), 0) })
-        }
-        box.addView(nav)
+        box.addView(TextView(this).apply {
+            text = "REDLINE  •  COMPANION MODE ONLY"
+            textSize = 8f; letterSpacing = .1f; gravity = Gravity.CENTER
+            setTextColor(Color.rgb(130, 112, 126)); setPadding(0, dp(8), 0, 0)
+        })
     }
 
-    private fun controlSwitch(name: String, parent: LinearLayout) {
+    private fun controlTile(name: String, parent: LinearLayout) {
         val prefs = getSharedPreferences("redline_controls", MODE_PRIVATE)
         val tile = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER
-            setPadding(dp(4), dp(5), dp(4), dp(3))
-            background = bg(Color.rgb(78, 28, 49), Color.rgb(25, 16, 29), dp(14).toFloat())
-            elevation = dp(4).toFloat()
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(10), dp(10), dp(10), dp(8))
+            background = bg(Color.rgb(54, 28, 44), Color.rgb(22, 17, 27), dp(15).toFloat())
+            isClickable = true; isFocusable = true
         }
-        tile.addView(TextView(this).apply {
+        val head = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        head.addView(TextView(this).apply {
+            text = "✦"; textSize = 14f; setTextColor(Color.rgb(255, 75, 100))
+        }, LinearLayout.LayoutParams(dp(20), -2))
+        head.addView(TextView(this).apply {
             text = name; textSize = 10f; typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE); gravity = Gravity.CENTER; maxLines = 2
-        }, LinearLayout.LayoutParams(-1, dp(29)))
-        val toggle = Switch(this).apply {
-            isChecked = prefs.getBoolean(name, false); showText = false
-            scaleX = .78f; scaleY = .78f; gravity = Gravity.CENTER
-            setOnCheckedChangeListener { _, checked ->
-                prefs.edit().putBoolean(name, checked).apply()
-                Toast.makeText(this@OverlayService, "$name ${if (checked) "ON" else "OFF"}", Toast.LENGTH_SHORT).show()
-            }
+            setTextColor(Color.WHITE); maxLines = 2
+        }, LinearLayout.LayoutParams(0, dp(34), 1f))
+        tile.addView(head)
+        val enabled = prefs.getBoolean(name, false)
+        tile.addView(TextView(this).apply {
+            text = if (enabled) "●  ENABLED" else "○  DISABLED"
+            textSize = 8f; typeface = Typeface.DEFAULT_BOLD
+            setTextColor(if (enabled) Color.rgb(104, 235, 160) else Color.rgb(160, 148, 160))
+            setPadding(dp(20), dp(4), 0, 0)
+        })
+        tile.setOnClickListener {
+            val next = !prefs.getBoolean(name, false)
+            prefs.edit().putBoolean(name, next).apply()
+            Toast.makeText(this, "$name ${if (next) "ON" else "OFF"}", Toast.LENGTH_SHORT).show()
+            renderPanel()
         }
-        tile.addView(toggle)
-        parent.addView(tile, LinearLayout.LayoutParams(0, dp(69), 1f).apply { setMargins(dp(3), 0, dp(3), 0) })
+        parent.addView(tile, LinearLayout.LayoutParams(0, dp(88), 1f).apply { setMargins(dp(3), 0, dp(3), 0) })
     }
 
-    private fun label(parent: LinearLayout, value: String) {
+    private fun sectionLabel(parent: LinearLayout, value: String) {
         parent.addView(TextView(this).apply {
-            text = value; textSize = 10f; letterSpacing = .13f
-            typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.LTGRAY)
-            gravity = Gravity.CENTER; setPadding(0, dp(6), 0, dp(4))
+            text = value; textSize = 9f; letterSpacing = .16f
+            typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.rgb(255, 105, 125))
+            setPadding(dp(2), dp(3), 0, dp(8))
         })
     }
 
-    private fun button(parent: LinearLayout, title: String, subtitle: String, action: () -> Unit) {
-        val tile = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL; setPadding(dp(12), dp(10), dp(12), dp(10))
-            background = bg(Color.rgb(105, 27, 49), Color.rgb(35, 17, 31), dp(14).toFloat())
-            elevation = dp(4).toFloat(); isClickable = true; isFocusable = true
+    private fun actionCard(parent: LinearLayout, title: String, subtitle: String, detail: String, action: () -> Unit) {
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(13), dp(11), dp(13), dp(11))
+            background = bg(Color.rgb(54, 28, 44), Color.rgb(22, 17, 27), dp(15).toFloat())
+            isClickable = true; isFocusable = true
         }
-        tile.addView(TextView(this).apply {
-            text = title; textSize = 11f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE)
+        card.addView(TextView(this).apply {
+            text = title; textSize = 8f; letterSpacing = .12f
+            typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.rgb(255, 105, 125))
         })
-        tile.addView(TextView(this).apply {
-            text = subtitle; textSize = 9f; setTextColor(Color.rgb(205, 184, 194)); setPadding(0, dp(3), 0, 0)
+        card.addView(TextView(this).apply {
+            text = subtitle; textSize = 12f; typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.WHITE); setPadding(0, dp(4), 0, dp(3))
         })
-        tile.setOnClickListener { action() }
-        parent.addView(tile, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
+        card.addView(TextView(this).apply {
+            text = detail; textSize = 9f; setTextColor(Color.rgb(190, 178, 190))
+        })
+        card.setOnClickListener {
+            card.animate().scaleX(.98f).scaleY(.98f).setDuration(70).withEndAction {
+                card.animate().scaleX(1f).scaleY(1f).setDuration(90).start()
+                action()
+            }.start()
+        }
+        parent.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int) = START_NOT_STICKY
