@@ -49,7 +49,13 @@ class MainActivity : Activity() {
     private fun showDashboard() {
         val root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setBackgroundColor(bgColor) }
         val header=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(20),dp(22),dp(20),dp(16)); background=gradient(Color.rgb(55,9,20),Color.rgb(16,12,18),dp(22).toFloat()); elevation=dp(8).toFloat() }
-        val brandRow=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL }\n        brandRow.addView(TextView(this).apply { text="R"; textSize=30f; typeface=Typeface.create("sans-serif-black",Typeface.BOLD); gravity=Gravity.CENTER; setTextColor(Color.WHITE); background=gradient(Color.rgb(255,45,68),Color.rgb(100,4,25),dp(50).toFloat()); elevation=dp(12).toFloat() },LinearLayout.LayoutParams(dp(58),dp(58)))\n        val brandText=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(12),0,0,0) }\n        brandText.addView(TextView(this).apply { text="REDLINE"; textSize=24f; typeface=Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE); letterSpacing=.08f })\n        brandText.addView(TextView(this).apply { text="GAMING COMPANION"; textSize=10f; letterSpacing=.16f; setTextColor(red) })\n        brandRow.addView(brandText)\n        header.addView(brandRow)
+        val brandRow=LinearLayout(this).apply { orientation=LinearLayout.HORIZONTAL; gravity=Gravity.CENTER_VERTICAL }
+        brandRow.addView(TextView(this).apply { text="R"; textSize=30f; typeface=Typeface.create("sans-serif-black",Typeface.BOLD); gravity=Gravity.CENTER; setTextColor(Color.WHITE); background=gradient(Color.rgb(255,45,68),Color.rgb(100,4,25),dp(50).toFloat()); elevation=dp(12).toFloat() },LinearLayout.LayoutParams(dp(58),dp(58)))
+        val brandText=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(12),0,0,0) }
+        brandText.addView(TextView(this).apply { text="REDLINE"; textSize=24f; typeface=Typeface.DEFAULT_BOLD; setTextColor(Color.WHITE); letterSpacing=.08f })
+        brandText.addView(TextView(this).apply { text="GAMING COMPANION"; textSize=10f; letterSpacing=.16f; setTextColor(red) })
+        brandRow.addView(brandText)
+        header.addView(brandRow)
         header.addView(TextView(this).apply { text="●  READY TO RUN"; textSize=11f; letterSpacing=.14f; setTextColor(red); setPadding(0,dp(6),0,0) })
         root.addView(header,LinearLayout.LayoutParams(-1,dp(112)).apply { setMargins(dp(14),dp(14),dp(14),dp(8)) })
         content=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(8),dp(18),dp(12)) }
@@ -65,7 +71,8 @@ class MainActivity : Activity() {
         val tabs=listOf("HOME" to "⌂","FEATURES" to "✦","SUPPORT" to "?") 
         tabs.forEach { (name, glyph) ->
             val active=currentTab==name
-            val b=TextView(this).apply { text="$glyph\n$name"; gravity=Gravity.CENTER; textSize=if(active)12f else 10f; typeface=if(active)Typeface.DEFAULT_BOLD else Typeface.DEFAULT; setTextColor(if(active) Color.WHITE else Color.GRAY); background=if(active) gradient(Color.rgb(210,22,48),Color.rgb(105,8,27),dp(16).toFloat()) else null; setPadding(dp(10),dp(10),dp(10),dp(10)); minHeight=dp(54); setOnClickListener { currentTab=name; renderTab() } }
+            val b=TextView(this).apply { text="$glyph
+$name"; gravity=Gravity.CENTER; textSize=if(active)12f else 10f; typeface=if(active)Typeface.DEFAULT_BOLD else Typeface.DEFAULT; setTextColor(if(active) Color.WHITE else Color.GRAY); background=if(active) gradient(Color.rgb(210,22,48),Color.rgb(105,8,27),dp(16).toFloat()) else null; setPadding(dp(10),dp(10),dp(10),dp(10)); minHeight=dp(54); setOnClickListener { currentTab=name; renderTab() } }
             nav.addView(b,LinearLayout.LayoutParams(0,-1,1f).apply { setMargins(dp(4),0,dp(4),0) })
         }
         when(currentTab) {
