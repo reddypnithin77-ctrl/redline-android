@@ -84,8 +84,12 @@ class OverlayService : Service() {
             "FEATURES"->{
                 label("CONTROL PANEL")
                 label("VISUAL SWITCHES")
-                controlNames.forEach { controlSwitch(it) }
-                box.addView(TextView(this).apply{text="Visual settings only • REDLINE does not connect to or modify game data";textSize=9f;gravity=Gravity.CENTER;textAlignment=View.TEXT_ALIGNMENT_CENTER;setTextColor(Color.LTGRAY);setPadding(dp(4),dp(10),dp(4),dp(4))})
+                controlNames.chunked(2).forEach { pair ->
+                    val line=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER}
+                    pair.forEach { name -> controlSwitch(name,line) }
+                    if(pair.size==1) line.addView(View(this),LinearLayout.LayoutParams(0,dp(1),1f))
+                    box.addView(line,LinearLayout.LayoutParams(-1,-2).apply{topMargin=dp(6)})
+                }
             }
             else->{
                 label("SUPPORT")
@@ -105,14 +109,14 @@ class OverlayService : Service() {
         box.addView(nav)
     }
 
-    private fun controlSwitch(name:String){
+    private fun controlSwitch(name:String,parent:LinearLayout){
         val prefs=getSharedPreferences("redline_controls",MODE_PRIVATE)
-        val row=LinearLayout(this).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL;setPadding(dp(10),dp(4),dp(8),dp(4));background=bg(Color.rgb(45,27,39),Color.rgb(27,19,29),dp(12).toFloat())}
-        val title=TextView(this).apply{text=name;textSize=12f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE)}
-        row.addView(title,LinearLayout.LayoutParams(0,dp(42),1f))
-        val toggle=Switch(this).apply{isChecked=prefs.getBoolean(name,false);showText=false;scaleX=.9f;scaleY=.9f;setOnCheckedChangeListener{_,checked->prefs.edit().putBoolean(name,checked).apply();Toast.makeText(this@OverlayService,"$name ${if(checked)"ON" else "OFF"}",Toast.LENGTH_SHORT).show()}}
-        row.addView(toggle)
-        panel?.addView(row,LinearLayout.LayoutParams(-1,-2).apply{topMargin=dp(5)})
+        val tile=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(dp(5),dp(7),dp(5),dp(5));background=bg(Color.rgb(58,25,43),Color.rgb(24,17,29),dp(13).toFloat());elevation=dp(5).toFloat()}
+        val title=TextView(this).apply{text=name;textSize=10f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.WHITE);gravity=Gravity.CENTER;maxLines=2}
+        tile.addView(title,LinearLayout.LayoutParams(-1,dp(30)))
+        val toggle=Switch(this).apply{isChecked=prefs.getBoolean(name,false);showText=false;scaleX=.82f;scaleY=.82f;gravity=Gravity.CENTER;setOnCheckedChangeListener{_,checked->prefs.edit().putBoolean(name,checked).apply();Toast.makeText(this@OverlayService,"$name ${if(checked)"ON" else "OFF"}",Toast.LENGTH_SHORT).show()}}
+        tile.addView(toggle)
+        parent.addView(tile,LinearLayout.LayoutParams(0,dp(78),1f).apply{setMargins(dp(3),0,dp(3),0)})
     }
 
     private fun label(s:String){panel?.addView(TextView(this).apply{text=s;textSize=10f;letterSpacing=.12f;typeface=Typeface.DEFAULT_BOLD;setTextColor(Color.LTGRAY);gravity=Gravity.CENTER;setPadding(0,dp(8),0,dp(5))})}
