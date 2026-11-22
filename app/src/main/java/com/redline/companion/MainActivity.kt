@@ -9,6 +9,7 @@ import android.provider.Settings
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import android.graphics.Color
 import android.view.Gravity
 
@@ -43,11 +44,17 @@ class MainActivity : Activity() {
         root.addView(Button(this).apply {
             text = "2. Start REDLINE floating menu"
             setOnClickListener {
-                if (Settings.canDrawOverlays(this@MainActivity)) {
+                if (!Settings.canDrawOverlays(this@MainActivity)) {
+                    startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+                    Toast.makeText(this@MainActivity, "Allow REDLINE to display over other apps, then tap Start again.", Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
+                try {
                     val intent = Intent(this@MainActivity, OverlayService::class.java)
                     if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent) else startService(intent)
-                } else {
-                    startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+                    Toast.makeText(this@MainActivity, "Starting REDLINE floating controls…", Toast.LENGTH_SHORT).show()
+                } catch (e: Exception) {
+                    Toast.makeText(this@MainActivity, "Could not start overlay: ${e.javaClass.simpleName} — ${e.message ?: "check app permissions"}", Toast.LENGTH_LONG).show()
                 }
             }
         })
